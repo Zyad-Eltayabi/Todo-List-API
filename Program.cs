@@ -1,13 +1,17 @@
+using Microsoft.EntityFrameworkCore;
 using Todo_List_API.Extensions;
+using Todo_List_API.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(SwaggerExtensions.Options());
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("Default") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+    options.UseSqlServer(connectionString);
+});
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
