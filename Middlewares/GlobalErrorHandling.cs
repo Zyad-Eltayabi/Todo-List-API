@@ -62,17 +62,17 @@ namespace Todo_List_API.Middlewares
                     problemDetails.Type = "https://httpstatuses.com/404";
                     break;
 
-                case AuthenticationException:
+                case AuthenticationException e:
                     problemDetails.Status = (int)HttpStatusCode.Unauthorized;
                     problemDetails.Title = "Unauthorized";
-                    problemDetails.Detail = "Authentication failed.";
+                    problemDetails.Detail = e.Message;
                     problemDetails.Type = "https://httpstatuses.com/401";
                     break;
 
-                case UnauthorizedAccessException:
+                case UnauthorizedAccessException e:
                     problemDetails.Status = (int)HttpStatusCode.Forbidden;
                     problemDetails.Title = "Forbidden";
-                    problemDetails.Detail = "Access denied.";
+                    problemDetails.Detail = e.Message;
                     problemDetails.Type = "https://httpstatuses.com/403";
                     break;
 

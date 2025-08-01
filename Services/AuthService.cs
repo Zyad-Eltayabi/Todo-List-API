@@ -8,6 +8,7 @@ using System.Security.Authentication;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
 using Todo_List_API.DTOs;
 using Todo_List_API.Helpers;
 using Todo_List_API.Interfaces;
@@ -25,7 +26,8 @@ namespace Todo_List_API.Services
         private readonly JwtOptions _jwt;
 
 
-        public AuthService(IConfiguration configuration, ILogger<AuthService> logger, ApplicationDbContext context, IOptions<JwtOptions> jwt)
+        public AuthService(IConfiguration configuration, ILogger<AuthService> logger, ApplicationDbContext context,
+            IOptions<JwtOptions> jwt)
         {
             _configuration = configuration;
             _logger = logger;
@@ -58,6 +60,7 @@ namespace Todo_List_API.Services
                 RefreshTokenExpiresOn = refereshToken.ExpiresOn
             };
         }
+
         private RefreshToken GenerateRefreshToken()
         {
             var randomNumber = new byte[32];
@@ -74,17 +77,18 @@ namespace Todo_List_API.Services
         private void SaveNewRefreshToken(int userId, RefreshToken token)
         {
             // check if user exists
-            bool isExist = _context.Users.Any(u =>  u.Id == userId);
+            bool isExist = _context.Users.Any(u => u.Id == userId);
             if (!isExist)
                 throw new KeyNotFoundException("User does not exist");
             token.UserId = userId;
             _context.RefreshTokens.Add(token);
             _context.SaveChanges();
         }
+
         private string GenerateJwtSecurityToken(User user)
         {
             var claims = new[]
-                         {
+            {
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
                 new Claim(JwtRegisteredClaimNames.Email, user.Email),
@@ -131,6 +135,59 @@ namespace Todo_List_API.Services
 
                 throw new ArgumentException(message);
             }
+        }
+
+        public async Task<AuthResponseDto> LoginAsync(LoginDTO loginDto)
+        {
+            // check if user exists 
+            var user = await ValidateLoginAsync(loginDto);
+            // if user exists, generate a JWT token and refresh token
+            return await GenerateTokenForLoggedInUser(user);
+        }
+
+        private async Task<AuthResponseDto> GenerateTokenForLoggedInUser(User user)
+        {
+            string jwtToken = GenerateJwtSecurityToken(user);
+            var refreshToken = await GetActiveRefreshToken(user);
+            return new AuthResponseDto
+            {
+                Message = "User logged in successfully",
+                Token = jwtToken,
+                RefreshToken = refreshToken.Token,
+                RefreshTokenExpiresOn = refreshToken.ExpiresOn,
+                IsAuthenticated = true,
+                Email = user.Email,
+            };
+        }
+
+        public async Task<RefreshToken> GetActiveRefreshToken(User user)
+        {
+            var refreshToken = await _context.RefreshTokens.FirstOrDefaultAsync(r =>
+                r.UserId == user.Id && r.ExpiresOn > DateTime.UtcNow && r.RevokedOn == null);
+            return refreshToken is not null ? refreshToken : CreateAndSaveNewRefreshToken(user.Id);
+        }
+
+        private RefreshToken CreateAndSaveNewRefreshToken(int userId)
+        {
+            var newRefreshToken = GenerateRefreshToken();
+            SaveNewRefreshToken(userId, newRefreshToken);
+            return newRefreshToken;
+        }
+
+        private async Task<User> ValidateLoginAsync(LoginDTO loginDto)
+        {
+            // check if user exists
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDto.Email);
+            if (user is null)
+                throw new AuthenticationException("Invalid email or password.");
+
+            // check if password is correct
+            var passwordVerificationResult = _hasher.VerifyHashedPassword(user, user.Password, loginDto.Password);
+            if (passwordVerificationResult == PasswordVerificationResult.Failed)
+                throw new AuthenticationException("Invalid email or password.");
+
+            // if user exists and password is correct, return the user
+            return user;
         }
     }
 }

@@ -39,5 +39,16 @@ namespace Todo_List_API.Controllers
             };
             Response.Cookies.Append("RefreshToken", token, cookieOptions);
         }
+        
+        [HttpPost]
+        [Route("login")]
+        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType( StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> LoginAsync([FromBody] LoginDTO loginDto)
+        {
+            var response = await _authService.LoginAsync(loginDto);
+            SetTokenCookie(response.RefreshToken, response.RefreshTokenExpiresOn);
+            return Ok(response);
+        }
     }
 }
