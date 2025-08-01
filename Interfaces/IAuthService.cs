@@ -7,5 +7,6 @@ namespace Todo_List_API.Interfaces
         Task<AuthResponseDto> RegisterAsync(RegisterDTO registerDto);
         Task<AuthResponseDto> LoginAsync(LoginDTO loginDto);
         Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
+        Task<bool> RevokeTokenAsync(string token);
     }
 }

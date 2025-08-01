@@ -246,5 +246,20 @@ namespace Todo_List_API.Services
                 throw new AuthenticationException("Invalid or expired refresh token.");
             return token;
         }
+
+        public async Task<bool> RevokeTokenAsync(string refreshToken)
+        {
+
+            var token = await _context.RefreshTokens.FirstOrDefaultAsync(t => t.Token == refreshToken &&
+            t.RevokedOn == null);
+
+            if (token is null || token.IsExpired)
+                throw new AuthenticationException("Token already revoked or not found.");
+
+            token.RevokedOn = DateTime.UtcNow;
+            _context.RefreshTokens.Update(token);
+            await _context.SaveChangesAsync();
+            return true;
+        }
     }
 }

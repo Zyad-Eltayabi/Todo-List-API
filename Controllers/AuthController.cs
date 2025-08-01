@@ -65,5 +65,19 @@ namespace Todo_List_API.Controllers
             SetTokenCookie(response.RefreshToken, response.RefreshTokenExpiresOn);
             return Ok(response);
         }
+
+        [HttpPut]
+        [Route("revoke-token")]
+        [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> RevokeToken()
+        {
+            var refreshToken = Request.Cookies["RefreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+                return Unauthorized("Refresh token is missing.");
+
+            var response = await _authService.RevokeTokenAsync(refreshToken);
+            return Ok();
+        }
     }
 }
