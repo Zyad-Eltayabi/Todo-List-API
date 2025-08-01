@@ -189,5 +189,62 @@ namespace Todo_List_API.Services
             // if user exists and password is correct, return the user
             return user;
         }
+
+        public async Task<AuthResponseDto> RefreshTokenAsync(string refreshToken)
+        {
+            // validate the refresh token
+            RefreshToken? token = await ValidateRefreshTokenAsync(refreshToken);
+
+            // find the user associated with the refresh token
+            User? user = await FindUserByRefreshToken(token);
+
+            // revoke the old refresh token
+            await RevokeRefreshTokenAsync(token);
+
+            // generate a new JWT token and refresh token
+            return GenerateTokenForRefreshedUser(user);
+        }
+
+        private AuthResponseDto GenerateTokenForRefreshedUser(User? user)
+        {
+            // generate a new JWT token and refresh token
+            string jwtToken = GenerateJwtSecurityToken(user);
+            var newRefreshToken = GenerateRefreshToken();
+            SaveNewRefreshToken(user.Id, newRefreshToken);
+            return new AuthResponseDto
+            {
+                Message = "Token refreshed successfully",
+                Token = jwtToken,
+                RefreshToken = newRefreshToken.Token,
+                RefreshTokenExpiresOn = newRefreshToken.ExpiresOn,
+                IsAuthenticated = true,
+                Email = user.Email
+            };
+        }
+
+        private async Task RevokeRefreshTokenAsync(RefreshToken? token)
+        {
+            // revoke the old refresh token
+            token.RevokedOn = DateTime.UtcNow;
+            _context.RefreshTokens.Update(token);
+            await _context.SaveChangesAsync();
+        }
+
+        private async Task<User?> FindUserByRefreshToken(RefreshToken? token)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == token.UserId);
+            if (user is null)
+                throw new KeyNotFoundException("User not found.");
+            return user;
+        }
+
+        private async Task<RefreshToken?> ValidateRefreshTokenAsync(string refreshToken)
+        {
+            var token = await _context.RefreshTokens
+                            .FirstOrDefaultAsync(r => r.Token == refreshToken && r.ExpiresOn > DateTime.UtcNow && r.RevokedOn == null);
+            if (token is null)
+                throw new AuthenticationException("Invalid or expired refresh token.");
+            return token;
+        }
     }
 }
