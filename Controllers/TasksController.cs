@@ -14,11 +14,11 @@ namespace Todo_List_API.Controllers
     [Produces("application/json")]
     [Consumes("application/json")]
     [Authorize]
-    [ProducesResponseType(typeof(ProblemDetails),StatusCodes.Status500InternalServerError)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
     public class TasksController : ControllerBase
     {
         private readonly IToDoService _toDoService;
-        private readonly ILogger<TasksController> _logger; 
+        private readonly ILogger<TasksController> _logger;
 
         public TasksController(IToDoService toDoService, ILogger<TasksController> logger)
         {
@@ -40,11 +40,14 @@ namespace Todo_List_API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult> CreateTask([FromBody] ToDoDTO toDoDto)
         {
+            _logger.LogInformation(
+                "Creating task with details - Title: {Title}, Description: {Description}, TagCount: {TagCount}",
+                toDoDto.Title, toDoDto.Description, toDoDto.Tags.Count);
             var userId = GetUserId();
             await _toDoService.CreateTaskAsync(userId, toDoDto);
             return Ok();
         }
-        
+
         [HttpPut]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -52,7 +55,8 @@ namespace Todo_List_API.Controllers
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<ActionResult> UpdateTask([FromBody] UpdateToDoDTO updateToDoDto)
         {
-            _logger.LogInformation("Updating task with details - TaskId: {TaskId}, Title: {Title}, Description: {Description}, TagCount: {TagCount}", 
+            _logger.LogInformation(
+                "Updating task with details - TaskId: {TaskId}, Title: {Title}, Description: {Description}, TagCount: {TagCount}",
                 updateToDoDto.TaskId, updateToDoDto.Title, updateToDoDto.Description, updateToDoDto.Tags.Count);
             var userId = GetUserId();
             await _toDoService.UpdateTaskAsync(userId, updateToDoDto);

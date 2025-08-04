@@ -23,6 +23,7 @@ namespace Todo_List_API.Services
             ToDo toDoItem = CreateToDoEntity(userID, toDoDto);
             await AssignTagsToToDoAsync(toDoDto, toDoItem);
             await AddToDoAsync(toDoItem);
+            _logger.LogInformation("Task created successfully. TaskId: {TaskId}", toDoItem.Id);
         }
 
         private async Task AddToDoAsync(ToDo toDoItem)
@@ -89,11 +90,12 @@ namespace Todo_List_API.Services
             };
         }
 
-        private static void ValidateToDoDTO(ToDoDTO toDoDto)
+        private void ValidateToDoDTO(ToDoDTO toDoDto)
         {
             // Validate the DTO
             if (string.IsNullOrWhiteSpace(toDoDto.Title) || string.IsNullOrEmpty(toDoDto.Description))
             {
+                _logger.LogError("Title or Description cannot be empty.");
                 throw new ArgumentException("Title or Description cannot be empty.");
             }
         }
@@ -102,7 +104,10 @@ namespace Todo_List_API.Services
         {
             // Validate the user ID
             if (!await _context.Users.AnyAsync(u => u.Id == userID))
+            {
+                _logger.LogError("User not found. UserId: {UserId}", userID);
                 throw new ArgumentException("User not found.");
+            }
         }
 
         public async Task UpdateTaskAsync(int userID, UpdateToDoDTO updateToDoDto)
