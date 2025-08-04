@@ -16,12 +16,12 @@ namespace Todo_List_API.Services
             _logger = logger;
         }
 
-        public async Task CreateTaskAsync(int userID, ToDoDTO toDoDto)
+        public async Task CreateTaskAsync(int userID, CreateToDoDTO createToDoDto)
         {
             await ValidateUser(userID);
-            ValidateToDoDTO(toDoDto);
-            ToDo toDoItem = CreateToDoEntity(userID, toDoDto);
-            await AssignTagsToToDoAsync(toDoDto, toDoItem);
+            ValidateToDoDTO(createToDoDto);
+            ToDo toDoItem = CreateToDoEntity(userID, createToDoDto);
+            await AssignTagsToToDoAsync(createToDoDto, toDoItem);
             await AddToDoAsync(toDoItem);
             _logger.LogInformation("Task created successfully. TaskId: {TaskId}", toDoItem.Id);
         }
@@ -34,15 +34,15 @@ namespace Todo_List_API.Services
             await _context.SaveChangesAsync();
         }
 
-        private async Task AssignTagsToToDoAsync(ToDoDTO toDoDto, ToDo toDoItem)
+        private async Task AssignTagsToToDoAsync(CreateToDoDTO createToDoDto, ToDo toDoItem)
         {
             // add tags if any
-            if (!toDoDto.Tags.Any())
+            if (!createToDoDto.Tags.Any())
                 return;
 
             // Initialize the ToDoTags collection
             toDoItem.ToDoTags = new List<ToDoTag>();
-            foreach (var tag in toDoDto.Tags)
+            foreach (var tag in createToDoDto.Tags)
             {
                 if (tag is not null && tag.Trim().Length > 0)
                 {
@@ -79,21 +79,21 @@ namespace Todo_List_API.Services
             }
         }
 
-        private static ToDo CreateToDoEntity(int UserId, ToDoDTO toDoDto)
+        private static ToDo CreateToDoEntity(int UserId, CreateToDoDTO createToDoDto)
         {
             // Map DTO to Model
             return new ToDo
             {
                 UserId = UserId,
-                Title = toDoDto.Title,
-                Description = toDoDto.Description,
+                Title = createToDoDto.Title,
+                Description = createToDoDto.Description,
             };
         }
 
-        private void ValidateToDoDTO(ToDoDTO toDoDto)
+        private void ValidateToDoDTO(CreateToDoDTO createToDoDto)
         {
             // Validate the DTO
-            if (string.IsNullOrWhiteSpace(toDoDto.Title) || string.IsNullOrEmpty(toDoDto.Description))
+            if (string.IsNullOrWhiteSpace(createToDoDto.Title) || string.IsNullOrEmpty(createToDoDto.Description))
             {
                 _logger.LogError("Title or Description cannot be empty.");
                 throw new ArgumentException("Title or Description cannot be empty.");

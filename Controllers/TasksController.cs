@@ -38,13 +38,13 @@ namespace Todo_List_API.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-        public async Task<ActionResult> CreateTask([FromBody] ToDoDTO toDoDto)
+        public async Task<ActionResult> CreateTask([FromBody] CreateToDoDTO createToDoDto)
         {
             _logger.LogInformation(
                 "Creating task with details - Title: {Title}, Description: {Description}, TagCount: {TagCount}",
-                toDoDto.Title, toDoDto.Description, toDoDto.Tags.Count);
+                createToDoDto.Title, createToDoDto.Description, createToDoDto.Tags.Count);
             var userId = GetUserId();
-            await _toDoService.CreateTaskAsync(userId, toDoDto);
+            await _toDoService.CreateTaskAsync(userId, createToDoDto);
             return Ok();
         }
 
