@@ -8,10 +8,12 @@ namespace Todo_List_API.Services
     public class ToDoService : IToDoService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ILogger<ToDoService> _logger;
 
-        public ToDoService(ApplicationDbContext context)
+        public ToDoService(ApplicationDbContext context, ILogger<ToDoService> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task CreateTaskAsync(int userID, ToDoDTO toDoDto)
@@ -101,6 +103,174 @@ namespace Todo_List_API.Services
             // Validate the user ID
             if (!await _context.Users.AnyAsync(u => u.Id == userID))
                 throw new ArgumentException("User not found.");
+        }
+
+        public async Task UpdateTaskAsync(int userID, UpdateToDoDTO updateToDoDto)
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                ValidateUpdateToDoDto(updateToDoDto);
+                var updateToDoItem = await RetrieveToDoItemForUpdate(userID, updateToDoDto);
+                MapUpdatedValuesFromDto(updateToDoDto, updateToDoItem);
+                // update tags if any
+                await UpdateTags(updateToDoDto, updateToDoItem);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                _logger.LogInformation("Task updated successfully. TaskId: {TaskId}", updateToDoDto.TaskId);
+            }
+            catch (Exception e)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(e, "Error updating task. TaskId: {TaskId}", updateToDoDto.TaskId);
+                throw new Exception(e.Message);
+            }
+        }
+
+        private async Task UpdateTags(UpdateToDoDTO updateToDoDto, ToDo updateToDoItem)
+        {
+            if (!updateToDoDto.Tags.Any())
+            {
+                // this means that the user wants to remove all tags
+                await RemoveAllTagsAsync(updateToDoDto.TaskId);
+                return;
+            }
+
+            updateToDoDto.Tags = updateToDoDto.Tags
+                .Select(t => t.Trim().ToLowerInvariant())
+                .ToList();
+
+            var existingTagsNames = await FetchExistingTagNames(updateToDoDto);
+
+            await RemoveUnwantedTags(updateToDoDto, existingTagsNames);
+
+            await AddNewTags(updateToDoDto, existingTagsNames);
+        }
+
+        private async Task<List<string>> FetchExistingTagNames(UpdateToDoDTO updateToDoDto)
+            => await _context.ToDoTags
+                .Where(t => t.ToDoId == updateToDoDto.TaskId)
+                .Select(t => t.Tag.Name)
+                .ToListAsync();
+
+        private async Task AddNewTags(UpdateToDoDTO updateToDoDto, List<string> existingTagsNames)
+        {
+            var tagsToAdd = updateToDoDto.Tags?
+                .Except(existingTagsNames ?? Enumerable.Empty<string>())
+                .ToList();
+
+            if (tagsToAdd.Any())
+            {
+                foreach (var tagToAdd in tagsToAdd)
+                {
+                    if (string.IsNullOrWhiteSpace(tagToAdd))
+                        continue;
+
+                    // check if the tag already exists
+                    var existingTagId = await _context.Tags
+                        .Where(t => t.Name == tagToAdd)
+                        .Select(t => t.Id)
+                        .FirstOrDefaultAsync();
+
+                    var newToDoTag = new ToDoTag()
+                    {
+                        ToDoId = updateToDoDto.TaskId,
+                    };
+
+                    if (existingTagId != 0)
+                    {
+                        newToDoTag.TagId = existingTagId;
+                    }
+                    else
+                    {
+                        newToDoTag.Tag = new Tag
+                        {
+                            Name = tagToAdd
+                        };
+                    }
+
+                    await _context.ToDoTags.AddAsync(newToDoTag);
+                }
+            }
+        }
+
+        private async Task RemoveUnwantedTags(UpdateToDoDTO updateToDoDto, List<string> existingTagsNames)
+        {
+            var tagsToRemove = (existingTagsNames ?? Enumerable.Empty<string>())
+                .Except(updateToDoDto.Tags ?? Enumerable.Empty<string>())
+                .ToList();
+
+            if (tagsToRemove.Any())
+            {
+                var tagIdsToRemove = await _context.Tags
+                    .Where(t => tagsToRemove.Contains(t.Name))
+                    .Select(t => t.Id)
+                    .ToListAsync();
+
+                await _context.ToDoTags
+                    .Where(t => tagIdsToRemove.Contains(t.TagId) && t.ToDoId == updateToDoDto.TaskId)
+                    .ExecuteDeleteAsync();
+            }
+        }
+
+        private async Task RemoveAllTagsAsync(int TaskId)
+        {
+            // check if there are any tags
+            var isToDoTagsExist = await _context.ToDoTags.AnyAsync(t => t.ToDoId == TaskId);
+
+            // if there are no tags, this means that this task has no tags
+            if (!isToDoTagsExist)
+                return;
+
+            // remove all tags
+            var result = await _context.ToDoTags
+                .Where(t => t.ToDoId == TaskId)
+                .ExecuteDeleteAsync();
+
+            if (result == 0)
+            {
+                _logger.LogError("Failed to remove tags from task. TaskId: {TaskId}", TaskId);
+                throw new DbUpdateException("Failed to remove tags from task.");
+            }
+        }
+
+        private void MapUpdatedValuesFromDto(UpdateToDoDTO updateToDoDto, ToDo? updateToDoItem)
+        {
+            // Map the updated values from the DTO to the entity
+            updateToDoItem.UpdatedDate = DateTime.UtcNow;
+            updateToDoItem.Title = updateToDoDto.Title;
+            updateToDoItem.Description = updateToDoDto.Description;
+        }
+
+        private async Task<ToDo?> RetrieveToDoItemForUpdate(int userID, UpdateToDoDTO updateToDoDto)
+        {
+            var updateToDoItem = await _context.ToDos
+                .Where(t => t.Id == updateToDoDto.TaskId && t.UserId == userID)
+                .FirstOrDefaultAsync();
+
+            if (updateToDoItem == null)
+            {
+                _logger.LogError("Task not found. TaskId: {TaskId}", updateToDoDto.TaskId);
+                throw new ArgumentException("Task not found.");
+            }
+
+            return updateToDoItem;
+        }
+
+        private void ValidateUpdateToDoDto(UpdateToDoDTO updateToDoDto)
+        {
+            if (updateToDoDto.TaskId <= 0)
+            {
+                _logger.LogError("TaskId must be greater than zero.");
+                throw new ArgumentException("TaskId must be greater than zero.");
+            }
+
+            // Validate the DTO
+            if (string.IsNullOrWhiteSpace(updateToDoDto.Title) || string.IsNullOrEmpty(updateToDoDto.Description))
+            {
+                _logger.LogError("Title or Description cannot be empty.");
+                throw new ArgumentException("Title or Description cannot be empty.");
+            }
         }
     }
 }

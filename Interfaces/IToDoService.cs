@@ -5,5 +5,6 @@ namespace Todo_List_API.Interfaces
     public interface IToDoService
     {
         Task CreateTaskAsync(int userID, ToDoDTO toDoDto);
+        Task UpdateTaskAsync(int userID, UpdateToDoDTO updateToDoDto);
     }
 }

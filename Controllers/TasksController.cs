@@ -18,10 +18,12 @@ namespace Todo_List_API.Controllers
     public class TasksController : ControllerBase
     {
         private readonly IToDoService _toDoService;
+        private readonly ILogger<TasksController> _logger; 
 
-        public TasksController(IToDoService toDoService)
+        public TasksController(IToDoService toDoService, ILogger<TasksController> logger)
         {
             _toDoService = toDoService;
+            _logger = logger;
         }
 
         private int GetUserId()
@@ -40,6 +42,20 @@ namespace Todo_List_API.Controllers
         {
             var userId = GetUserId();
             await _toDoService.CreateTaskAsync(userId, toDoDto);
+            return Ok();
+        }
+        
+        [HttpPut]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult> UpdateTask([FromBody] UpdateToDoDTO updateToDoDto)
+        {
+            _logger.LogInformation("Updating task with details - TaskId: {TaskId}, Title: {Title}, Description: {Description}, TagCount: {TagCount}", 
+                updateToDoDto.TaskId, updateToDoDto.Title, updateToDoDto.Description, updateToDoDto.Tags.Count);
+            var userId = GetUserId();
+            await _toDoService.UpdateTaskAsync(userId, updateToDoDto);
             return Ok();
         }
     }
