@@ -4,9 +4,9 @@ namespace Todo_List_API.Interfaces
 {
     public interface IAuthService
     {
-        Task<AuthResponseDto> RegisterAsync(RegisterDTO registerDto);
-        Task<AuthResponseDto> LoginAsync(LoginDTO loginDto);
-        Task<AuthResponseDto> RefreshTokenAsync(string refreshToken);
+        Task<AuthResponseDTO> RegisterAsync(RegisterDTO registerDto);
+        Task<AuthResponseDTO> LoginAsync(LoginDTO loginDto);
+        Task<AuthResponseDTO> RefreshTokenAsync(string refreshToken);
         Task<bool> RevokeTokenAsync(string token);
     }
 }

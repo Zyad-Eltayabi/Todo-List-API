@@ -18,6 +18,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 });
 builder.Services.AddJwtAuthentication(builder.Configuration);
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IToDoService, ToDoService>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

@@ -18,8 +18,8 @@ namespace Todo_List_API.Controllers
 
         [HttpPost]
         [Route("register")]
-        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(AuthResponseDTO), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AuthResponseDTO), StatusCodes.Status400BadRequest)]
         public async Task<IActionResult> RegisterAsync([FromBody] RegisterDTO registerDto)
         {
             var response = await _authService.RegisterAsync(registerDto);
@@ -42,7 +42,7 @@ namespace Todo_List_API.Controllers
 
         [HttpPost]
         [Route("login")]
-        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AuthResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> LoginAsync([FromBody] LoginDTO loginDto)
         {
@@ -53,7 +53,7 @@ namespace Todo_List_API.Controllers
 
         [HttpGet]
         [Route("refresh-token")]
-        [ProducesResponseType(typeof(AuthResponseDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(AuthResponseDTO), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         public async Task<IActionResult> RefreshTokenAsync()
         {

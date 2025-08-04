@@ -35,7 +35,7 @@ namespace Todo_List_API.Services
             _jwt = jwt.Value;
         }
 
-        public async Task<AuthResponseDto> RegisterAsync(RegisterDTO registerDto)
+        public async Task<AuthResponseDTO> RegisterAsync(RegisterDTO registerDto)
         {
             await ValidateUserRegistrationAsync(registerDto);
             // if validation does not throw, proceed with registration 
@@ -45,12 +45,12 @@ namespace Todo_List_API.Services
         }
 
         // create a JWT token for the registered user
-        private AuthResponseDto GenerateToken(User user)
+        private AuthResponseDTO GenerateToken(User user)
         {
             string jwtToken = GenerateJwtSecurityToken(user);
             RefreshToken refereshToken = GenerateRefreshToken();
             SaveNewRefreshToken(user.Id, refereshToken);
-            return new AuthResponseDto
+            return new AuthResponseDTO
             {
                 Message = "User registered successfully",
                 Token = jwtToken,
@@ -137,7 +137,7 @@ namespace Todo_List_API.Services
             }
         }
 
-        public async Task<AuthResponseDto> LoginAsync(LoginDTO loginDto)
+        public async Task<AuthResponseDTO> LoginAsync(LoginDTO loginDto)
         {
             // check if user exists 
             var user = await ValidateLoginAsync(loginDto);
@@ -145,11 +145,11 @@ namespace Todo_List_API.Services
             return await GenerateTokenForLoggedInUser(user);
         }
 
-        private async Task<AuthResponseDto> GenerateTokenForLoggedInUser(User user)
+        private async Task<AuthResponseDTO> GenerateTokenForLoggedInUser(User user)
         {
             string jwtToken = GenerateJwtSecurityToken(user);
             var refreshToken = await GetActiveRefreshToken(user);
-            return new AuthResponseDto
+            return new AuthResponseDTO
             {
                 Message = "User logged in successfully",
                 Token = jwtToken,
@@ -190,7 +190,7 @@ namespace Todo_List_API.Services
             return user;
         }
 
-        public async Task<AuthResponseDto> RefreshTokenAsync(string refreshToken)
+        public async Task<AuthResponseDTO> RefreshTokenAsync(string refreshToken)
         {
             // validate the refresh token
             RefreshToken? token = await ValidateRefreshTokenAsync(refreshToken);
@@ -205,13 +205,13 @@ namespace Todo_List_API.Services
             return GenerateTokenForRefreshedUser(user);
         }
 
-        private AuthResponseDto GenerateTokenForRefreshedUser(User? user)
+        private AuthResponseDTO GenerateTokenForRefreshedUser(User? user)
         {
             // generate a new JWT token and refresh token
             string jwtToken = GenerateJwtSecurityToken(user);
             var newRefreshToken = GenerateRefreshToken();
             SaveNewRefreshToken(user.Id, newRefreshToken);
-            return new AuthResponseDto
+            return new AuthResponseDTO
             {
                 Message = "Token refreshed successfully",
                 Token = jwtToken,
