@@ -6,6 +6,8 @@ using System.Security.Claims;
 using System.Threading.Tasks;
 using Todo_List_API.DTOs;
 using Todo_List_API.Interfaces;
+using Todo_List_API.Models;
+using Todo_List_API.Pagination;
 
 namespace Todo_List_API.Controllers
 {
@@ -74,6 +76,17 @@ namespace Todo_List_API.Controllers
             _logger.LogInformation("Retrieving task with details - TaskId: {TaskId}", taskId);
             var userId = GetUserId();
             return await _toDoService.GetTaskAsync(userId, taskId);
+        }
+        
+        [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ToDoDetailsDTO>> GetAllTasks([FromQuery] PaginationRequestDTO paginationRequestDto)
+        {
+            _logger.LogInformation("Retrieving all tasks with details - PageNumber: {PageNumber}, PageSize: {PageSize}", paginationRequestDto.PageNumber, paginationRequestDto.PageSize);
+            var userId = GetUserId();
+            return await _toDoService.GetAllTasksAsync(userId, paginationRequestDto);
         }
     }
 }

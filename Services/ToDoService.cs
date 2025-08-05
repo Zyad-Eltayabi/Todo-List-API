@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Todo_List_API.DTOs;
+using Todo_List_API.Extensions;
 using Todo_List_API.Interfaces;
 using Todo_List_API.Models;
+using Todo_List_API.Pagination;
 
 namespace Todo_List_API.Services
 {
@@ -301,6 +303,56 @@ namespace Todo_List_API.Services
                 .FirstOrDefaultAsync();
 
             return item ?? throw new KeyNotFoundException("Task not found.");
+        }
+
+        public async Task<ToDoDetailsDTO> GetAllTasksAsync(int userID, PaginationRequestDTO paginationRequestDto)
+        {
+            var items = await RetrieveUserToDoItems(userID, paginationRequestDto);
+
+            var mappedItems = MapPaginatedToDoToDetailsDTO(items);
+
+            return mappedItems;
+        }
+
+        private static ToDoDetailsDTO MapPaginatedToDoToDetailsDTO(PaginatedResult<ToDoResponseDTO> items)
+        {
+            var mappedItems = new ToDoDetailsDTO();
+            if (items is not null)
+            {
+                mappedItems.ToDoResponseDTOs = items.Data.Select(t => new ToDoResponseDTO()
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    UpdatedDate = t.UpdatedDate,
+                    Tags = t.Tags
+                }).ToList();
+             
+                mappedItems.TotalCount = items.TotalCount;
+                mappedItems.TotalPages = items.TotalPages;
+                mappedItems.CurrentPage = items.CurrentPage;
+                mappedItems.PageSize = items.PageSize;
+            }
+
+            return mappedItems;
+        }
+
+        private async Task<PaginatedResult<ToDoResponseDTO>> RetrieveUserToDoItems(int userID, PaginationRequestDTO paginationRequestDto)
+        {
+            var items = await _context.ToDos
+                .Where(u => u.UserId == userID)
+                .Select(t => new ToDoResponseDTO()
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    UpdatedDate = t.UpdatedDate,
+                    Tags = t.ToDoTags
+                        .Select(tt => tt.Tag.Name)
+                        .ToList()
+                })
+                .ToPaginatedListAsync(paginationRequestDto.PageNumber, paginationRequestDto.PageSize);
+            return items;
         }
     }
 }
