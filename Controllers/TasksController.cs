@@ -62,5 +62,18 @@ namespace Todo_List_API.Controllers
             await _toDoService.UpdateTaskAsync(userId, updateToDoDto);
             return Ok();
         }
+
+        [HttpGet]
+        [Route("{taskId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult<ToDoResponseDTO>> GetTask([FromRoute] int taskId)
+        {
+            _logger.LogInformation("Retrieving task with details - TaskId: {TaskId}", taskId);
+            var userId = GetUserId();
+            return await _toDoService.GetTaskAsync(userId, taskId);
+        }
     }
 }

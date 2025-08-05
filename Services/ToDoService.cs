@@ -277,5 +277,30 @@ namespace Todo_List_API.Services
                 throw new ArgumentException("Title or Description cannot be empty.");
             }
         }
+
+        public async Task<ToDoResponseDTO> GetTaskAsync(int userID, int taskId)
+        {
+            await ValidateUser(userID);
+            return await RetrieveTaskDetails(userID, taskId);
+        }
+
+        private async Task<ToDoResponseDTO> RetrieveTaskDetails(int userID, int taskId)
+        {
+            var item = await _context.ToDos
+                .Where(t => t.UserId == userID && t.Id == taskId)
+                .Select(t => new ToDoResponseDTO
+                {
+                    Id = t.Id,
+                    Title = t.Title,
+                    Description = t.Description,
+                    UpdatedDate = t.UpdatedDate,
+                    Tags = t.ToDoTags
+                        .Select(tt => tt.Tag.Name)
+                        .ToList()
+                })
+                .FirstOrDefaultAsync();
+
+            return item ?? throw new KeyNotFoundException("Task not found.");
+        }
     }
 }
