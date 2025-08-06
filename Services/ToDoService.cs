@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System.Linq.Expressions;
+using Microsoft.EntityFrameworkCore;
 using Todo_List_API.DTOs;
 using Todo_List_API.Extensions;
 using Todo_List_API.Interfaces;
@@ -327,7 +328,7 @@ namespace Todo_List_API.Services
                     UpdatedDate = t.UpdatedDate,
                     Tags = t.Tags
                 }).ToList();
-             
+
                 mappedItems.TotalCount = items.TotalCount;
                 mappedItems.TotalPages = items.TotalPages;
                 mappedItems.CurrentPage = items.CurrentPage;
@@ -337,11 +338,15 @@ namespace Todo_List_API.Services
             return mappedItems;
         }
 
-        private async Task<PaginatedResult<ToDoResponseDTO>> RetrieveUserToDoItems(int userID, PaginationRequestDTO paginationRequestDto)
+        private async Task<PaginatedResult<ToDoResponseDTO>> RetrieveUserToDoItems(int userID,
+            PaginationRequestDTO paginationRequestDto)
         {
-            var items = await _context.ToDos
-                .Where(u => u.UserId == userID)
-                .Select(t => new ToDoResponseDTO()
+            var query = ApplyToDoFilters(userID, paginationRequestDto);
+
+            query = ApplySortingToDoItems(paginationRequestDto, query);
+
+            var items = await query
+                .Select(t => new ToDoResponseDTO
                 {
                     Id = t.Id,
                     Title = t.Title,
@@ -352,7 +357,39 @@ namespace Todo_List_API.Services
                         .ToList()
                 })
                 .ToPaginatedListAsync(paginationRequestDto.PageNumber, paginationRequestDto.PageSize);
+
             return items;
+        }
+
+        private IQueryable<ToDo> ApplySortingToDoItems(PaginationRequestDTO paginationRequestDto, IQueryable<ToDo> query)
+        {
+            Expression<Func<ToDo, object>> keySelector = paginationRequestDto.SortBy switch
+            {
+                "title" => t => t.Title,
+                "tags" => t => t.ToDoTags.Count(),
+                _ => t => t.Id
+            };
+
+            query = paginationRequestDto.IsAscending
+                ? query.OrderBy(keySelector)
+                : query.OrderByDescending(keySelector);
+            return query;
+        }
+
+        private IQueryable<ToDo> ApplyToDoFilters(int userID, PaginationRequestDTO paginationRequestDto)
+        {
+            var query = _context.ToDos
+                .Where(u => u.UserId == userID);
+
+            if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByTag))
+                query = query.Where(t => t.ToDoTags.Any(b => b.Tag.Name.Contains(paginationRequestDto.FilterByTag.ToLower())));
+            
+            if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByTitle))
+                query = query.Where(t => t.Title.Contains(paginationRequestDto.FilterByTitle));
+            
+            if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByDescription))
+                query = query.Where(t => t.Description.Contains(paginationRequestDto.FilterByDescription));
+            return query;
         }
     }
 }
