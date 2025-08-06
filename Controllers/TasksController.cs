@@ -88,5 +88,18 @@ namespace Todo_List_API.Controllers
             var userId = GetUserId();
             return await _toDoService.GetAllTasksAsync(userId, paginationRequestDto);
         }
+        
+        [HttpDelete]
+        [Route("{taskId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<ActionResult> DeleteTask([FromRoute] int taskId)
+        {
+            _logger.LogInformation("Deleting task with details - TaskId: {TaskId}", taskId);
+            var userId = GetUserId();
+            await _toDoService.DeleteTaskAsync(userId, taskId);
+            return Ok();
+        }
     }
 }

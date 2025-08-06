@@ -361,7 +361,8 @@ namespace Todo_List_API.Services
             return items;
         }
 
-        private IQueryable<ToDo> ApplySortingToDoItems(PaginationRequestDTO paginationRequestDto, IQueryable<ToDo> query)
+        private IQueryable<ToDo> ApplySortingToDoItems(PaginationRequestDTO paginationRequestDto,
+            IQueryable<ToDo> query)
         {
             Expression<Func<ToDo, object>> keySelector = paginationRequestDto.SortBy switch
             {
@@ -382,14 +383,32 @@ namespace Todo_List_API.Services
                 .Where(u => u.UserId == userID);
 
             if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByTag))
-                query = query.Where(t => t.ToDoTags.Any(b => b.Tag.Name.Contains(paginationRequestDto.FilterByTag.ToLower())));
-            
+                query = query.Where(t =>
+                    t.ToDoTags.Any(b => b.Tag.Name.Contains(paginationRequestDto.FilterByTag.ToLower())));
+
             if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByTitle))
                 query = query.Where(t => t.Title.Contains(paginationRequestDto.FilterByTitle));
-            
+
             if (!string.IsNullOrWhiteSpace(paginationRequestDto.FilterByDescription))
                 query = query.Where(t => t.Description.Contains(paginationRequestDto.FilterByDescription));
             return query;
+        }
+
+        public async Task DeleteTaskAsync(int userID, int taskId)
+        {
+            await ValidateUser(userID);
+            var item = await _context.ToDos
+                .Where(t => t.Id == taskId && t.UserId == userID)
+                .FirstOrDefaultAsync();
+            if (item is null)
+            {
+                _logger.LogError("Task not found. TaskId: {TaskId}", taskId);
+                throw new KeyNotFoundException("Task not found.");
+            }
+
+            _context.ToDos.Remove(item);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Task deleted successfully. TaskId: {TaskId}", taskId);
         }
     }
 }

@@ -10,5 +10,6 @@ namespace Todo_List_API.Interfaces
         Task UpdateTaskAsync(int userID, UpdateToDoDTO updateToDoDto);
         Task<ToDoResponseDTO> GetTaskAsync(int userID, int taskId);
         Task<ToDoDetailsDTO> GetAllTasksAsync(int userID, PaginationRequestDTO paginationRequestDto);
+        Task DeleteTaskAsync(int userID, int taskId);
     }
 }
